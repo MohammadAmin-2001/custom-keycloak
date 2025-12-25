@@ -1,2 +1,4 @@
 com.mesutpiskin.keycloak.auth.email.EmailAuthenticatorFormFactory
 com.mesutpiskin.keycloak.auth.email.ConditionalEmailAuthenticatorFormFactory
+com.mesutpiskin.keycloak.auth.time.TimeRestrictionAuthenticatorFactory
+com.mesutpiskin.keycloak.auth.ip.IPRestrictionAuthenticatorFactory
