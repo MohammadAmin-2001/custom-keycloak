@@ -30,7 +30,7 @@ This custom Keycloak authenticator restricts user authentication based on time o
 
 2. Copy the JAR to Keycloak:
    ```bash
-   cp target/keycloak-2fa-email-authenticator.jar /opt/keycloak/providers/
+   cp target/custom-keycloak.jar /opt/keycloak/providers/
    ```
 
 3. Restart Keycloak:
