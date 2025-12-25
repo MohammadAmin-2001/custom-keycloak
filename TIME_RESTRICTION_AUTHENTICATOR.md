@@ -9,6 +9,7 @@ This custom Keycloak authenticator restricts user authentication based on time o
 - **Timezone Support**: Configure timezone for accurate time checking
 - **Overnight Support**: Handle time ranges that span midnight (e.g., 22:00 - 06:00)
 - **Custom Error Messages**: Display custom messages when access is denied
+- **Event Logging**: Failed login attempts due to time/date restrictions are logged as events with detailed information
 
 ## Configuration Options
 
@@ -190,9 +191,87 @@ To test the authenticator:
 - The authenticator requires an authenticated user (place it after username/password authentication)
 - Multiple time restriction authenticators can be used in the same flow with different configurations
 
+## Event Logging
+
+When a user is denied access due to time/date restrictions, the authenticator logs a failed login event with the following details:
+
+### Event Type
+- **Error**: `NOT_ALLOWED`
+
+### Event Details
+The event includes comprehensive details about why access was denied:
+
+| Detail Key | Description | Example |
+|------------|-------------|----------|
+| `reason` | Human-readable reason for denial | "Time/Date restriction: Current day SATURDAY is not allowed" |
+| `allowed_days` | Configured allowed days | "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY" |
+| `allowed_time_range` | Configured time range | "09:00 - 17:00" |
+| `current_day` | Current day when access was attempted | "SATURDAY" |
+| `current_time` | Current time when access was attempted | "14:30:15.123" |
+| `timezone` | Configured timezone | "America/New_York" |
+
+### Viewing Events
+
+You can view these events in the Keycloak Admin Console:
+
+1. Go to your realm
+2. Navigate to **Events** → **Login Events**
+3. Look for events with:
+   - **Type**: `LOGIN_ERROR`
+   - **Error**: `NOT_ALLOWED`
+   - **Details**: Contains "Time/Date restriction" in the reason
+
+### Event Examples
+
+**Example 1: Access Denied - Wrong Day**
+```
+Type: LOGIN_ERROR
+Error: NOT_ALLOWED
+Details:
+  - reason: Time/Date restriction: Current day SATURDAY is not allowed
+  - allowed_days: MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY
+  - current_day: SATURDAY
+  - timezone: UTC
+```
+
+**Example 2: Access Denied - Wrong Time**
+```
+Type: LOGIN_ERROR
+Error: NOT_ALLOWED
+Details:
+  - reason: Time/Date restriction: Current time 20:45:32 is not within allowed range
+  - allowed_time_range: 09:00 - 17:00
+  - current_time: 20:45:32.123456789
+  - current_day: WEDNESDAY
+  - timezone: America/New_York
+```
+
+### Monitoring and Alerts
+
+You can use these events to:
+- **Monitor unauthorized access attempts** during restricted hours
+- **Set up alerts** for unusual patterns (e.g., many attempts during restricted times)
+- **Audit compliance** with time-based access policies
+- **Generate reports** on access patterns and restriction violations
+
+### Event Listeners
+
+Keycloak's event system allows you to:
+- Export events to external systems (SIEM, log aggregation, etc.)
+- Create custom event listeners to trigger actions on time restriction violations
+- Store events in a database for long-term analysis
+
+To enable event logging:
+1. Go to **Events** → **Event Listeners**
+2. Add desired event listeners (e.g., `jboss-logging`, custom listeners)
+3. Go to **Events** → **Login Events Settings**
+4. Enable **Save Events** and select the events to save
+
 ## Security Considerations
 
 - This authenticator should be used in combination with proper authentication (username/password, 2FA, etc.)
 - Time restrictions are based on server time in the configured timezone
 - Users with valid sessions may remain logged in past restricted times
 - Consider using session timeouts to enforce logout during restricted periods
+- **All failed login attempts are logged** as events for security auditing and compliance
+- Review login events regularly to detect potential security issues or misconfigurations

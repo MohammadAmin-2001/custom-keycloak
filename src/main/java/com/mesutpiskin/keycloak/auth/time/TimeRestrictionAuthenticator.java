@@ -4,6 +4,9 @@ import org.jboss.logging.Logger;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
+import org.keycloak.events.Details;
+import org.keycloak.events.Errors;
+import org.keycloak.events.EventBuilder;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -72,6 +75,16 @@ public class TimeRestrictionAuthenticator implements Authenticator {
             if (!allowedDays.contains(currentDay)) {
                 logger.infof("Access denied for user %s: Current day %s is not in allowed days %s", 
                     context.getUser().getUsername(), currentDay, allowedDays);
+                
+                // Log event for failed login due to day restriction
+                EventBuilder event = context.getEvent();
+                event.user(context.getUser())
+                     .detail(Details.REASON, "Time/Date restriction: Current day " + currentDay + " is not allowed")
+                     .detail("allowed_days", allowedDaysStr)
+                     .detail("current_day", currentDay.toString())
+                     .detail("timezone", timezone)
+                     .error(Errors.NOT_ALLOWED);
+                
                 context.failure(AuthenticationFlowError.INVALID_USER, 
                     createErrorResponse(context, errorMessage));
                 return;
@@ -87,6 +100,17 @@ public class TimeRestrictionAuthenticator implements Authenticator {
             if (!isTimeAllowed) {
                 logger.infof("Access denied for user %s: Current time %s is not within allowed range %s - %s (timezone: %s)", 
                     context.getUser().getUsername(), currentTime, startTime, endTime, timezone);
+                
+                // Log event for failed login due to time restriction
+                EventBuilder event = context.getEvent();
+                event.user(context.getUser())
+                     .detail(Details.REASON, "Time/Date restriction: Current time " + currentTime + " is not within allowed range")
+                     .detail("allowed_time_range", startTimeStr + " - " + endTimeStr)
+                     .detail("current_time", currentTime.toString())
+                     .detail("current_day", currentDay.toString())
+                     .detail("timezone", timezone)
+                     .error(Errors.NOT_ALLOWED);
+                
                 context.failure(AuthenticationFlowError.INVALID_USER, 
                     createErrorResponse(context, errorMessage));
                 return;
