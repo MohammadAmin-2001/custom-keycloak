@@ -87,10 +87,21 @@ Two-factor authentication via email verification code.
      ```bash
      cp target/custom-keycloak-<version>.jar <keycloak-home>/providers/
      ```
-   - For a Dockerized Keycloak setup, copy the JAR to the deployments directory:
+   - For using docker:
+
      ```bash
-     cp target/custom-keycloak-<version>.jar /opt/jboss/keycloak/standalone/deployments/
-     ```
+      # Copy JAR to Keycloak providers directory
+      cp target/custom-keycloak.jar /opt/keycloak/providers/
+      
+      # Rebuild Keycloak (for production mode)
+      /opt/keycloak/bin/kc.sh build
+      
+      # Restart Keycloak
+      /opt/keycloak/bin/kc.sh start
+      
+      # Or for development mode:
+      /opt/keycloak/bin/kc.sh start-dev
+      ```
 
 6. **Build Keycloak**  
    Ensure Keycloak recognizes the new provider by running:
@@ -98,21 +109,6 @@ Two-factor authentication via email verification code.
    bin/kc.sh build
    ```
 
-### Deploy to Keycloak
-
-```bash
-# Copy JAR to Keycloak providers directory
-cp target/custom-keycloak.jar /opt/keycloak/providers/
-
-# Rebuild Keycloak (for production mode)
-/opt/keycloak/bin/kc.sh build
-
-# Restart Keycloak
-/opt/keycloak/bin/kc.sh start
-
-# Or for development mode:
-/opt/keycloak/bin/kc.sh start-dev
-```
 
 ### Configure in Keycloak Admin Console
 
