@@ -44,16 +44,16 @@ Find further information at https://projectlombok.org/setup/eclipse
    ```bash
    mvn clean package
    ```
-   This will create the JAR file `target/keycloak-2fa-email-authenticator-<version>.jar`.
+   This will create the JAR file `target/keycloak-custom-email-ip-time-<version>.jar`.
 
 5. **Deploy the JAR**  
    - For a standard Keycloak installation, copy the generated JAR file to the Keycloak providers directory:
      ```bash
-     cp target/keycloak-2fa-email-authenticator-<version>.jar <keycloak-home>/providers/
+     cp target/keycloak-custom-email-ip-time-<version>.jar <keycloak-home>/providers/
      ```
    - For a Dockerized Keycloak setup, copy the JAR to the deployments directory:
      ```bash
-     cp target/keycloak-2fa-email-authenticator-<version>.jar /opt/jboss/keycloak/standalone/deployments/
+     cp target/keycloak-custom-email-ip-time-<version>.jar /opt/jboss/keycloak/standalone/deployments/
      ```
 
 6. **Build Keycloak**  
@@ -65,7 +65,7 @@ Find further information at https://projectlombok.org/setup/eclipse
 ## Providers
 
 `mvn package` will create a jar file.
-copy `keycloak-2fa-email-authenticator.jar` to `keycloak/providers/` directory.
+copy `keycloak-custom-email-ip-time.jar` to `keycloak/providers/` directory.
 
 If you are Dockerized keycloak then copy to `/opt/jboss/keycloak/standalone/deployments/` directory.
 
