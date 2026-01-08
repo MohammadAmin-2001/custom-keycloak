@@ -38,7 +38,16 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
     protected Response challenge(AuthenticationFlowContext context, String error, String field) {
         generateAndSendEmailCode(context);
 
-        LoginFormsProvider form = context.form().setExecution(context.getExecution().getId());
+        // Get configured code length
+        int length = EmailConstants.DEFAULT_LENGTH;
+        AuthenticatorConfigModel config = context.getAuthenticatorConfig();
+        if (config != null) {
+            length = Integer.parseInt(config.getConfig().get(EmailConstants.CODE_LENGTH));
+        }
+
+        LoginFormsProvider form = context.form()
+            .setExecution(context.getExecution().getId())
+            .setAttribute("codeLength", length);
         if (error != null) {
             if (field != null) {
                 form.addError(new FormMessage(field, error));
@@ -164,6 +173,7 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
         mailBodyAttributes.put("username", user.getUsername());
         mailBodyAttributes.put("code", code);
         mailBodyAttributes.put("ttl", ttl);
+        mailBodyAttributes.put("codeLength", code.length());
 
         String realmName = realm.getDisplayName() != null ? realm.getDisplayName() : realm.getName();
         List<Object> subjectParams = List.of(realmName);
