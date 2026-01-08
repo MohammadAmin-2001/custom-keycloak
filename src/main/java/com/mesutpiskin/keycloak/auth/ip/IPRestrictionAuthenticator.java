@@ -54,6 +54,8 @@ public class IPRestrictionAuthenticator implements Authenticator {
         // Get IP rules from configuration
         List<String> ipRules = getIPRules(configMap);
         
+        logger.infof("Loaded %d IP rules: %s", ipRules.size(), ipRules);
+        
         if (ipRules.isEmpty()) {
             logger.debug("No IP rules configured, allowing access");
             context.success();
@@ -121,21 +123,31 @@ public class IPRestrictionAuthenticator implements Authenticator {
         );
 
         String clientIP = null;
+        String remoteAddr = context.getConnection().getRemoteAddr();
+        
+        logger.infof("checkXForwardedFor setting: %b", checkXForwardedFor);
+        logger.infof("Remote address from connection: %s", remoteAddr);
 
         // Check X-Forwarded-For header if enabled
         if (checkXForwardedFor) {
             String forwardedFor = request.getHttpHeaders().getHeaderString("X-Forwarded-For");
+            logger.infof("X-Forwarded-For header raw value: '%s'", forwardedFor);
+            
             if (forwardedFor != null && !forwardedFor.isEmpty()) {
                 clientIP = IPUtils.extractIPFromForwardedHeader(forwardedFor);
-                logger.debugf("Got IP from X-Forwarded-For: %s (original header: %s)", clientIP, forwardedFor);
+                logger.infof("Extracted IP from X-Forwarded-For: '%s' (original header: '%s')", clientIP, forwardedFor);
+            } else {
+                logger.infof("X-Forwarded-For header is null or empty");
             }
         }
 
         // Fallback to remote address from connection
         if (clientIP == null || clientIP.isEmpty()) {
-            clientIP = context.getConnection().getRemoteAddr();
-            logger.debugf("Got IP from remote address: %s", clientIP);
+            clientIP = remoteAddr;
+            logger.infof("Using remote address as client IP: %s", clientIP);
         }
+        
+        logger.infof("Final client IP determined: '%s'", clientIP);
 
         return clientIP;
     }
@@ -147,11 +159,15 @@ public class IPRestrictionAuthenticator implements Authenticator {
     private List<String> getIPRules(Map<String, String> config) {
         List<String> rules = new ArrayList<>();
         
+        logger.infof("Reading IP rules from config. Config map keys: %s", config.keySet());
+        
         // Check for multivalued configuration (key with index: ip-rules##0, ip-rules##1, etc.)
         int index = 0;
         while (true) {
             String key = IPRestrictionConstants.IP_RULES + "##" + index;
             String value = config.get(key);
+            
+            logger.debugf("Checking key '%s': value='%s'", key, value);
             
             if (value == null || value.trim().isEmpty()) {
                 // No more values
@@ -159,23 +175,28 @@ public class IPRestrictionAuthenticator implements Authenticator {
             }
             
             rules.add(value.trim());
+            logger.infof("Added multivalued rule #%d: '%s'", index, value.trim());
             index++;
         }
         
         // If no multivalued entries found, check for single value
         if (rules.isEmpty()) {
             String singleValue = config.get(IPRestrictionConstants.IP_RULES);
+            logger.infof("No multivalued rules found. Single value: '%s'", singleValue);
             if (singleValue != null && !singleValue.trim().isEmpty()) {
-                // Split by newlines or commas for backward compatibility
-                String[] splitRules = singleValue.split("[\\r\\n,]+");
+                // Keycloak stores multivalued strings with ## separator
+                // Also support newlines and commas for backward compatibility
+                String[] splitRules = singleValue.split("##|[\\r\\n,]+");
                 for (String rule : splitRules) {
                     if (!rule.trim().isEmpty()) {
                         rules.add(rule.trim());
+                        logger.infof("Added split rule: '%s'", rule.trim());
                     }
                 }
             }
         }
         
+        logger.infof("Final rules list: %s", rules);
         return rules;
     }
 
@@ -188,11 +209,17 @@ public class IPRestrictionAuthenticator implements Authenticator {
         boolean hasExplicitDeny = false;
         String matchedRule = null;
 
+        logger.infof("Checking IP '%s' against %d rules", clientIP, rules.size());
+
         // First pass: Check for explicit deny rules (-)
         for (String rule : rules) {
+            logger.debugf("Checking rule: '%s' (starts with deny: %b)", rule, rule.startsWith(IPRestrictionConstants.PREFIX_DENY));
             if (rule.startsWith(IPRestrictionConstants.PREFIX_DENY)) {
                 String ipPattern = rule.substring(1).trim();
-                if (IPUtils.matchesRule(clientIP, ipPattern)) {
+                boolean matches = IPUtils.matchesRule(clientIP, ipPattern);
+                logger.infof("Deny rule '%s' -> IP pattern '%s' matches '%s': %b", rule, ipPattern, clientIP, matches);
+                if (matches) {
+                    logger.infof("IP '%s' BLOCKED by deny rule: '%s'", clientIP, rule);
                     return new IPCheckResult(false, true, rule, 
                         IPRestrictionConstants.RESTRICTION_REASON_BLOCKED);
                 }
